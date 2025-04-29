@@ -2,6 +2,10 @@
 
 This is a Discord bot that helps you track expenses using Google Sheets. You can add expenses, view the total, and list all recorded expenses directly from your Discord server.
 
+DEMO: https://youtu.be/gQV7blxfj_Y
+
+
+
 ## Features
 
 - Add expenses with a description and amount.
