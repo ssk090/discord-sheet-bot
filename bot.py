@@ -25,7 +25,7 @@ sheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 
 # Discord bot setup
 intents = discord.Intents.default()
-intents.message_content = True  # Enable for legacy commands
+intents.message_content = True  # Enable for legacy commands and webhook messages
 bot = commands.Bot(command_prefix='/', intents=intents)
 tree = bot.tree  # For slash commands
 
@@ -52,6 +52,54 @@ async def on_guild_join(guild):
         await guild.system_channel.send(
             "👋 Hello! I'm your expense tracker. Use `/add`, `/total`, and `/list` to manage your expenses!"
         )
+
+@bot.event
+async def on_message(message):
+    # Ignore bot messages
+    if message.author == bot.user:
+        return
+
+    content = message.content.strip()
+    command = content.lower()
+
+    if command.startswith("/add"):
+        try:
+            _, *item_parts, amount = content.split()
+            item = " ".join(item_parts)
+            amount = float(amount)
+            date = add_expense(item, amount)
+            await message.channel.send(f"✅ Added: **{item}** – ₹{amount:.2f} on `{date}`")
+        except ValueError:
+            await message.channel.send("❌ Error: 'amount' must be a number. Usage: `/add <item> <amount>`")
+        except Exception as e:
+            logging.exception("Error in /add via on_message")
+            await message.channel.send(f"❌ Unexpected error: {e}")
+
+    elif command == "/total":
+        try:
+            total = calculate_total()
+            await message.channel.send(f"💰 Total Expenses: ₹{total:.2f}")
+        except Exception as e:
+            logging.exception("Error in /total via on_message")
+            await message.channel.send(f"❌ Error: {e}")
+
+    elif command == "/list":
+        try:
+            records = sheet.get_all_records()
+            if not records:
+                await message.channel.send("No records found.")
+                return
+
+            formatted = "\n".join(
+                f"📌 **{r['Expense']}** – ₹{r['Amount']} on {r['Date']}" for r in records[-5:]
+            )
+            await message.channel.send(f"🧾 Last 5 entries:\n{formatted}")
+        except Exception as e:
+            logging.exception("Error in /list via on_message")
+            await message.channel.send(f"❌ Error: {e}")
+
+    # Let normal command handlers work too
+    await bot.process_commands(message)
 
 # Legacy command
 @bot.command()
